@@ -1,0 +1,12 @@
+controller_node:
+  ros__parameters:
+    publish_rate_hz: 50.0
+    control_mode: position
+    backend: sim            # or gazebo
+    max_joint_velocity: 1.0
+    max_joint_acceleration: 2.0
+    approach_height: 1.0
+    gripper_time: 0.5
+    gripper_closed_position: 0.1
+    unreachable_policy: clip
+    initial_joint_angles: [0.0, 0.0, 0.0]
