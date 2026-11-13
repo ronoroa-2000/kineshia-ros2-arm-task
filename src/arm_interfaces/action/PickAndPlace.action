@@ -1,0 +1,16 @@
+# Full sequence: above pick -> pick (close gripper) -> lift -> transfer ->
+# place (open gripper) -> retreat.  Points are x, y in metres (z ignored).
+geometry_msgs/Point pick
+geometry_msgs/Point place
+---
+bool success
+string message
+string failed_step                # step that failed, empty on success
+geometry_msgs/Point final_position
+---
+string step                       # e.g. "pick_descend", "grip", "release"
+uint32 step_index                 # 1-based index of the current step
+uint32 total_steps
+float64 progress                  # 0.0 .. 1.0 over the whole sequence
+geometry_msgs/Point current_position
+float64 gripper_position          # finger position, 0 = open

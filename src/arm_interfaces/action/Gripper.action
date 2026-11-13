@@ -1,0 +1,9 @@
+# Close the gripper (pick) or open it (place). No arm motion.
+bool close                        # true = close (pick), false = open (place)
+---
+bool success
+string message
+float64 gripper_position          # final finger position, 0 = open
+---
+float64 gripper_position
+float64 progress                  # 0.0 .. 1.0

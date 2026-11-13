@@ -1,0 +1,12 @@
+# Move the tool tip to a target point (x, y in metres; z is ignored).
+# A target outside the workspace is clipped to the boundary (see `clipped`).
+geometry_msgs/Point target
+---
+bool success
+string message
+bool clipped                      # true if the target was outside the workspace
+geometry_msgs/Point final_position
+---
+string state                      # "moving" / "idle"
+geometry_msgs/Point current_position
+float64 distance_remaining        # metres from the tool tip to the target
