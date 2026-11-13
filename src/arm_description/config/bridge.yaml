@@ -1,0 +1,47 @@
+# ros_gz_bridge config for the planar arm (ROS 2 Jazzy <-> Gazebo Harmonic).
+# direction: GZ_TO_ROS | ROS_TO_GZ | BIDIRECTIONAL
+# World name "empty_world" and model name "planar_arm" must match
+# Gazebo/empty_world.sdf and the spawn name in launch/gazebo.launch.py.
+
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
+# Joint feedback from gz-sim-joint-state-publisher-system
+- ros_topic_name: "/joint_states"
+  gz_topic_name: "/world/empty_world/model/planar_arm/joint_state"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "gz.msgs.Model"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/planar_arm/joint1/cmd_pos"
+  gz_topic_name: "/planar_arm/joint1/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/planar_arm/joint2/cmd_pos"
+  gz_topic_name: "/planar_arm/joint2/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/planar_arm/joint3/cmd_pos"
+  gz_topic_name: "/planar_arm/joint3/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/planar_arm/ee_finger_left_joint/cmd_pos"
+  gz_topic_name: "/planar_arm/ee_finger_left_joint/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/planar_arm/ee_finger_right_joint/cmd_pos"
+  gz_topic_name: "/planar_arm/ee_finger_right_joint/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
