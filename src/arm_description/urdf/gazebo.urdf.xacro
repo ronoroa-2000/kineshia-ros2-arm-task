@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!--
+  Gazebo (gz-sim Harmonic) plugins for the arm. Ignored by RViz / robot_state_publisher.
+  Requires common_properties.xacro. Command topics must match config/bridge.yaml.
+    /planar_arm/<joint>/cmd_pos   (gz.msgs.Double, position in rad or m)
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="position_controller" params="joint p i d cmd_max">
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>${joint}</joint_name>
+      <topic>/planar_arm/${joint}/cmd_pos</topic>
+      <p_gain>${p}</p_gain>
+      <i_gain>${i}</i_gain>
+      <d_gain>${d}</d_gain>
+      <cmd_max>${cmd_max}</cmd_max>
+      <cmd_min>${-cmd_max}</cmd_min>
+    </plugin>
+  </xacro:macro>
+
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <joint_name>joint1</joint_name>
+      <joint_name>joint2</joint_name>
+      <joint_name>joint3</joint_name>
+      <joint_name>ee_finger_left_joint</joint_name>
+      <joint_name>ee_finger_right_joint</joint_name>
+    </plugin>
+
+    <xacro:position_controller joint="joint1" p="${gz_arm_p}" i="0" d="${gz_arm_d}" cmd_max="${j1_effort}"/>
+    <xacro:position_controller joint="joint2" p="${gz_arm_p}" i="0" d="${gz_arm_d}" cmd_max="${j2_effort}"/>
+    <xacro:position_controller joint="joint3" p="${gz_arm_p}" i="0" d="${gz_arm_d}" cmd_max="${j3_effort}"/>
+    <xacro:position_controller joint="ee_finger_left_joint" p="${gz_grip_p}" i="0" d="${gz_grip_d}" cmd_max="40"/>
+    <xacro:position_controller joint="ee_finger_right_joint" p="${gz_grip_p}" i="0" d="${gz_grip_d}" cmd_max="40"/>
+  </gazebo>
+
+  <!-- Friction so the fingers can hold objects -->
+  <gazebo reference="ee_finger_left">
+    <mu1>1.5</mu1><mu2>1.5</mu2>
+  </gazebo>
+  <gazebo reference="ee_finger_right">
+    <mu1>1.5</mu1><mu2>1.5</mu2>
+  </gazebo>
+
+</robot>

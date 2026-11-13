@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<!--
+  Shared parameters and materials. No links or joints here.
+  Units: metres, radians, kg. (`pi` is built into xacro.)
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ===== Arm link lengths (match planar_arm.py: [3.0, 2.0, 1.5]) ===== -->
+  <xacro:property name="L1" value="3.0"/>
+  <xacro:property name="L2" value="2.0"/>
+  <xacro:property name="L3" value="1.5"/>
+
+  <!-- Link cross-section (square) and mass -->
+  <xacro:property name="link1_thickness" value="0.12"/>
+  <xacro:property name="link2_thickness" value="0.10"/>
+  <xacro:property name="link3_thickness" value="0.08"/>
+  <xacro:property name="link1_mass" value="3.0"/>
+  <xacro:property name="link2_mass" value="2.0"/>
+  <xacro:property name="link3_mass" value="1.0"/>
+
+  <!-- ===== Base cylinder ===== -->
+  <xacro:property name="base_radius" value="0.25"/>
+  <xacro:property name="base_height" value="0.5"/>
+  <xacro:property name="base_mass" value="5.0"/>
+
+  <!-- ===== Joint limits (radians) ===== -->
+  <xacro:property name="j1_lower" value="0.0"/>
+  <xacro:property name="j1_upper" value="${pi}"/>
+  <xacro:property name="j23_limit" value="${120*pi/180}"/>   <!-- +/- 120 deg -->
+
+  <!-- Joint effort (N*m) / velocity (rad/s) / damping -->
+  <xacro:property name="j1_effort" value="100.0"/>
+  <xacro:property name="j2_effort" value="60.0"/>
+  <xacro:property name="j3_effort" value="30.0"/>
+  <xacro:property name="joint_velocity" value="2.0"/>
+  <xacro:property name="joint_damping" value="0.1"/>
+
+  <!-- ===== End effector (gripper) ===== -->
+  <!-- Palm: x = along the tool, y = across the fingers, z = thickness -->
+  <xacro:property name="ee_palm_x" value="0.15"/>
+  <xacro:property name="ee_palm_y" value="0.5"/>
+  <xacro:property name="ee_palm_z" value="0.12"/>
+  <xacro:property name="ee_palm_mass" value="1.0"/>
+  <xacro:property name="ee_finger_len" value="0.4"/>
+  <xacro:property name="ee_finger_w" value="0.05"/>
+  <xacro:property name="ee_finger_h" value="0.1"/>
+  <xacro:property name="ee_finger_mass" value="0.2"/>
+  <!-- Finger centre offset from the tool axis. Open gap = 2*(offset - w/2) = 0.37 -->
+  <xacro:property name="ee_finger_offset_y" value="0.21"/>
+  <xacro:property name="ee_finger_travel" value="0.15"/>   <!-- 0 = open; closed gap = 0.07 -->
+  <!-- Mount pitch about Y: 0 = tool points along link3 (the arm's length).
+       ${pi/2} would turn the tool's +X axis to world -Z (tool points down). -->
+  <xacro:property name="ee_mount_pitch" value="0"/>
+
+  <!-- ===== Gazebo position-controller gains ===== -->
+  <xacro:property name="gz_arm_p" value="400.0"/>
+  <xacro:property name="gz_arm_d" value="150.0"/>
+  <xacro:property name="gz_grip_p" value="200.0"/>
+  <xacro:property name="gz_grip_d" value="20.0"/>
+
+  <!-- ===== Colours (rgba) ===== -->
+  <xacro:property name="rgba_base" value="0.5 0.5 0.5 1.0"/>
+  <xacro:property name="rgba_link1" value="0.2 0.4 0.8 1.0"/>
+  <xacro:property name="rgba_link2" value="0.9 0.5 0.1 1.0"/>
+  <xacro:property name="rgba_link3" value="0.2 0.7 0.3 1.0"/>
+  <xacro:property name="rgba_ee_palm" value="0.4 0.4 0.4 1.0"/>
+  <xacro:property name="rgba_ee_finger" value="0.8 0.2 0.2 1.0"/>
+
+  <material name="base_color"><color rgba="${rgba_base}"/></material>
+  <material name="link1_color"><color rgba="${rgba_link1}"/></material>
+  <material name="link2_color"><color rgba="${rgba_link2}"/></material>
+  <material name="link3_color"><color rgba="${rgba_link3}"/></material>
+  <material name="ee_palm_color"><color rgba="${rgba_ee_palm}"/></material>
+  <material name="ee_finger_color"><color rgba="${rgba_ee_finger}"/></material>
+
+</robot>

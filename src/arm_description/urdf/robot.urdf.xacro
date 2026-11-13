@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!--
+  Top-level robot description: 3-DOF planar arm + gripper.
+  Process this file (it includes the others):
+    xacro robot.urdf.xacro
+-->
+<robot name="planar_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Parameters / materials first, then the macros that use them -->
+  <xacro:include filename="$(find arm_description)/urdf/common_properties.xacro"/>
+  <xacro:include filename="$(find arm_description)/urdf/planar_arm.urdf.xacro"/>
+  <xacro:include filename="$(find arm_description)/urdf/end_effector.urdf.xacro"/>
+
+  <xacro:include filename="$(find arm_description)/urdf/gazebo.urdf.xacro"/>
+
+  <link name="world"/>
+
+  <xacro:planar_arm parent="world"/>
+
+  <!-- Gripper at the tip of link3 -->
+  <xacro:end_effector parent="link3">
+    <origin xyz="${L3} 0 0" rpy="0 ${ee_mount_pitch} 0"/>
+  </xacro:end_effector>
+
+</robot>

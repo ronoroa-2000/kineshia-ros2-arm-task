@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<!--
+  Two-finger gripper end effector as a macro.
+  Requires common_properties.xacro to be included first.
+  +X points out along the tool. The left finger is the driven joint and the
+  right finger mimics it, so one slider/command opens and closes the gripper.
+
+  Usage:
+    <xacro:end_effector parent="link3">
+      <origin xyz="1.5 0 0" rpy="0 0 0"/>
+    </xacro:end_effector>
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="ee_finger" params="name side mimic_joint:=''">
+    <link name="${name}">
+      <visual>
+        <origin xyz="${ee_finger_len/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${ee_finger_len} ${ee_finger_w} ${ee_finger_h}"/></geometry>
+        <material name="ee_finger_color"/>
+      </visual>
+      <collision>
+        <origin xyz="${ee_finger_len/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${ee_finger_len} ${ee_finger_w} ${ee_finger_h}"/></geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${ee_finger_len/2} 0 0" rpy="0 0 0"/>
+        <mass value="${ee_finger_mass}"/>
+        <inertia ixx="${ee_finger_mass*(ee_finger_w*ee_finger_w + ee_finger_h*ee_finger_h)/12}" ixy="0" ixz="0"
+                 iyy="${ee_finger_mass*(ee_finger_len*ee_finger_len + ee_finger_h*ee_finger_h)/12}" iyz="0"
+                 izz="${ee_finger_mass*(ee_finger_len*ee_finger_len + ee_finger_w*ee_finger_w)/12}"/>
+      </inertial>
+    </link>
+    <!-- Prismatic: 0 = open, ee_finger_travel = closed (fingers slide toward each other) -->
+    <joint name="${name}_joint" type="prismatic">
+      <parent link="ee_base"/>
+      <child link="${name}"/>
+      <origin xyz="${ee_palm_x} ${side*ee_finger_offset_y} 0" rpy="0 0 0"/>
+      <axis xyz="0 ${-side} 0"/>
+      <limit lower="0.0" upper="${ee_finger_travel}" effort="40.0" velocity="0.1"/>
+      <dynamics damping="${joint_damping}" friction="0.0"/>
+      <xacro:if value="${mimic_joint != ''}">
+        <mimic joint="${mimic_joint}" multiplier="1" offset="0"/>
+      </xacro:if>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="end_effector" params="parent *origin">
+    <!-- Mounting frame / palm -->
+    <link name="ee_base">
+      <visual>
+        <origin xyz="${ee_palm_x/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${ee_palm_x} ${ee_palm_y} ${ee_palm_z}"/></geometry>
+        <material name="ee_palm_color"/>
+      </visual>
+      <collision>
+        <origin xyz="${ee_palm_x/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${ee_palm_x} ${ee_palm_y} ${ee_palm_z}"/></geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${ee_palm_x/2} 0 0" rpy="0 0 0"/>
+        <mass value="${ee_palm_mass}"/>
+        <inertia ixx="${ee_palm_mass*(ee_palm_y*ee_palm_y + ee_palm_z*ee_palm_z)/12}" ixy="0" ixz="0"
+                 iyy="${ee_palm_mass*(ee_palm_x*ee_palm_x + ee_palm_z*ee_palm_z)/12}" iyz="0"
+                 izz="${ee_palm_mass*(ee_palm_x*ee_palm_x + ee_palm_y*ee_palm_y)/12}"/>
+      </inertial>
+    </link>
+
+    <joint name="ee_mount_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="ee_base"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <xacro:ee_finger name="ee_finger_left" side="1"/>
+    <xacro:ee_finger name="ee_finger_right" side="-1" mimic_joint="ee_finger_left_joint"/>
+
+    <!-- Tool centre point at the fingertips -->
+    <link name="ee_tcp"/>
+    <joint name="ee_tcp_joint" type="fixed">
+      <parent link="ee_base"/>
+      <child link="ee_tcp"/>
+      <origin xyz="${ee_palm_x + ee_finger_len} 0 0" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

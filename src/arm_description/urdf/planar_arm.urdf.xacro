@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<!--
+  3-DOF planar revolute arm as a macro (base + 3 links + 3 joints).
+  Requires common_properties.xacro to be included first.
+  The arm moves in the X-Y plane, all joints rotate about +Z, "up" is +Y.
+  Zero pose: arm fully stretched along +X.
+
+  Usage:
+    <xacro:planar_arm parent="world"/>
+  base_link's origin is the BOTTOM of the base cylinder, placed on `parent`.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- A box link that extends from its joint along +X -->
+  <xacro:macro name="arm_link" params="name length thickness mass material">
+    <link name="${name}">
+      <visual>
+        <origin xyz="${length/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${length} ${thickness} ${thickness}"/></geometry>
+        <material name="${material}"/>
+      </visual>
+      <collision>
+        <origin xyz="${length/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${length} ${thickness} ${thickness}"/></geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${length/2} 0 0" rpy="0 0 0"/>
+        <mass value="${mass}"/>
+        <inertia ixx="${mass*(2*thickness*thickness)/12}" ixy="0" ixz="0"
+                 iyy="${mass*(length*length + thickness*thickness)/12}" iyz="0"
+                 izz="${mass*(length*length + thickness*thickness)/12}"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="arm_joint" params="name parent child x z:=0 lower upper effort">
+    <joint name="${name}" type="revolute">
+      <parent link="${parent}"/>
+      <child link="${child}"/>
+      <origin xyz="${x} 0 ${z}" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="${lower}" upper="${upper}" effort="${effort}" velocity="${joint_velocity}"/>
+      <dynamics damping="${joint_damping}" friction="0.0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="planar_arm" params="parent">
+
+    <!-- Base: origin at the bottom of the cylinder -->
+    <link name="base_link">
+      <visual>
+        <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${base_radius}" length="${base_height}"/></geometry>
+        <material name="base_color"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${base_radius}" length="${base_height}"/></geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
+        <mass value="${base_mass}"/>
+        <inertia ixx="${base_mass*(3*base_radius*base_radius + base_height*base_height)/12}" ixy="0" ixz="0"
+                 iyy="${base_mass*(3*base_radius*base_radius + base_height*base_height)/12}" iyz="0"
+                 izz="${base_mass*base_radius*base_radius/2}"/>
+      </inertial>
+    </link>
+
+    <joint name="${parent}_to_base" type="fixed">
+      <parent link="${parent}"/>
+      <child link="base_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Links -->
+    <xacro:arm_link name="link1" length="${L1}" thickness="${link1_thickness}" mass="${link1_mass}" material="link1_color"/>
+    <xacro:arm_link name="link2" length="${L2}" thickness="${link2_thickness}" mass="${link2_mass}" material="link2_color"/>
+    <xacro:arm_link name="link3" length="${L3}" thickness="${link3_thickness}" mass="${link3_mass}" material="link3_color"/>
+
+    <!-- joint1 sits on top of the base: base height + half of link1 thickness -->
+    <xacro:arm_joint name="joint1" parent="base_link" child="link1"
+                     x="0" z="${base_height + link1_thickness/2}"
+                     lower="${j1_lower}" upper="${j1_upper}" effort="${j1_effort}"/>
+    <xacro:arm_joint name="joint2" parent="link1" child="link2" x="${L1}"
+                     lower="${-j23_limit}" upper="${j23_limit}" effort="${j2_effort}"/>
+    <xacro:arm_joint name="joint3" parent="link2" child="link3" x="${L2}"
+                     lower="${-j23_limit}" upper="${j23_limit}" effort="${j3_effort}"/>
+
+  </xacro:macro>
+
+</robot>
