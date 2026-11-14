@@ -22,6 +22,9 @@
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>xacro</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>forward_command_controller</exec_depend>
   <!-- PyQt5 and pyqtgraph are pip/apt dependencies; see README. -->
 
   <test_depend>ament_copyright</test_depend>
