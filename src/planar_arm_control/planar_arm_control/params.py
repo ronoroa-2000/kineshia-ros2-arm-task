@@ -25,7 +25,12 @@ reads them, applying the same guards as before.
   unreachable_policy         policy         -       clip | reject
   initial_joint_angles       initial_q      rad     starting pose
   backend                    backend        -       sim | gazebo
-  control_mode               control_mode   -       position (only one so far)
+  control_mode               control_mode   -       position | pid (PID tracking, see pid_tracking.py)
+  pid_kp / pid_ki / pid_kd   pid_kp/ki/kd   -       per-joint gains (3 values each)
+  pid_i_limit                pid_i_limit    rad*s   clamp of the integral term
+  pid_max_correction         pid_max_correction rad max |correction| added to the reference
+  pid_max_age                pid_max_age    s       joint state older than this = no feedback
+  pid_ff_time                pid_ff_time    s       velocity feedforward: command += T * qd_ref
 """
 
 from dataclasses import dataclass, field
@@ -51,6 +56,13 @@ class ControllerParams:
     grip_time: float = 0.5
     grip_closed: float = 0.1
     policy: str = "clip"
+    pid_kp: list = field(default_factory=lambda: [2.0, 2.0, 2.0])
+    pid_ki: list = field(default_factory=lambda: [0.5, 0.5, 0.5])
+    pid_kd: list = field(default_factory=lambda: [0.05, 0.05, 0.05])
+    pid_i_limit: float = 0.2
+    pid_max_correction: float = 0.15
+    pid_max_age: float = 0.5
+    pid_ff_time: float = 0.3
     initial_q: list = field(default_factory=lambda: [0.0, 0.0, 0.0])
 
     @classmethod
@@ -59,7 +71,14 @@ class ControllerParams:
         d = cls()                                  # defaults live in one place
         declare = node.declare_parameter
         declare("publish_rate_hz", d.rate)
-        declare("control_mode", d.control_mode)    # velocity: stretch goal
+        declare("control_mode", d.control_mode)    # position | pid
+        declare("pid_kp", list(d.pid_kp))
+        declare("pid_ki", list(d.pid_ki))
+        declare("pid_kd", list(d.pid_kd))
+        declare("pid_i_limit", d.pid_i_limit)
+        declare("pid_max_correction", d.pid_max_correction)
+        declare("pid_max_age", d.pid_max_age)
+        declare("pid_ff_time", d.pid_ff_time)
         declare("backend", d.backend)              # sim | gazebo
         declare("max_joint_velocity", d.v_max)
         declare("max_joint_acceleration", d.a_max)
@@ -98,13 +117,20 @@ class ControllerParams:
             grip_time=max(float(get("gripper_time").value), 1e-3),
             grip_closed=float(get("gripper_closed_position").value),
             policy=str(get("unreachable_policy").value),
+            pid_kp=[float(v) for v in get("pid_kp").value],
+            pid_ki=[float(v) for v in get("pid_ki").value],
+            pid_kd=[float(v) for v in get("pid_kd").value],
+            pid_i_limit=float(get("pid_i_limit").value),
+            pid_max_correction=float(get("pid_max_correction").value),
+            pid_max_age=float(get("pid_max_age").value),
+            pid_ff_time=float(get("pid_ff_time").value),
             initial_q=[float(v) for v in get("initial_joint_angles").value],
         )
         if p.ik_mode not in ("heading", "library"):
             node.get_logger().warn(
                 f"unknown ik_mode '{p.ik_mode}'; using heading")
             p.ik_mode = "heading"
-        if p.control_mode != "position":
+        if p.control_mode not in ("position", "pid"):
             node.get_logger().warn(
                 f"control_mode '{p.control_mode}' not implemented yet; "
                 f"using position")

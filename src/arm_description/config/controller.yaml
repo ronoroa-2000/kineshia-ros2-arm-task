@@ -1,7 +1,14 @@
 controller_node:
   ros__parameters:
     publish_rate_hz: 50.0
-    control_mode: position
+    control_mode: position  # position | pid (PID tracking; needs backend gazebo)
+    pid_kp: [1.5, 1.5, 1.5]
+    pid_ki: [0.3, 0.3, 0.3]
+    pid_kd: [0.02, 0.02, 0.02]
+    pid_i_limit: 0.2            # rad*s, anti-windup clamp of the integral
+    pid_max_correction: 0.15    # rad, max added to the reference
+    pid_max_age: 0.5            # s, older joint states are ignored
+    pid_ff_time: 0.3            # s, velocity feedforward (servo lag compensation)
     backend: sim            # or gazebo
     max_joint_velocity: 1.0
     max_joint_acceleration: 2.0

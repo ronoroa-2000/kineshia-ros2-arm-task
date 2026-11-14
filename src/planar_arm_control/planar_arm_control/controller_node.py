@@ -41,6 +41,7 @@ from std_srvs.srv import Trigger
 from planar_arm_control.arm_model import ArmModel
 from planar_arm_control.backends import make_backend
 from planar_arm_control.params import ControllerParams
+from planar_arm_control.pid_tracking import PidTracker
 from planar_arm_control.sequencer import MotionSequencer
 
 FEEDBACK_PERIOD = 0.2  # s between action feedback messages (5 Hz)
@@ -57,6 +58,8 @@ class ControllerNode(Node):
             self.model, self.p, clock=self._now_s,
             on_status=self._publish_status, on_warn=self.get_logger().warn)
         self._backend = make_backend(self.p.backend, self)
+        # Outer PID loop: corrects the reference with the measured joint states
+        self.pid = PidTracker(self, self.p, self.model.arm.joint_limits)
 
         # Timer, topic callbacks and action threads all use the sequencer,
         # which is not thread-safe, so every one of them takes this lock.
@@ -271,8 +274,9 @@ class ControllerNode(Node):
             self.seq.step()
 
             stamp = self.get_clock().now().to_msg()
-            self._backend.send(
-                stamp, self.seq.q, self.seq.qd, self.seq.gripper)
+            q_cmd = self.pid.correct(
+                self.seq.q, self.seq.qd, self.seq.active is not None)
+            self._backend.send(stamp, q_cmd, self.seq.qd, self.seq.gripper)
 
             ee = self.seq.ee()                       # gripper centre
             msg = PointStamped()
