@@ -35,6 +35,11 @@ If the object is already at the place point when Gazebo opens, an old Gazebo
 server survived the last run and the new launch attached to its world. Check
 with `pgrep -af "gz sim"` and stop it with `pkill -f "gz sim"` before launching.
 
+## Demo
+
+A 70 s screen recording of the test scenario (pick (4, 2), place (−3, 3)) is in
+[`video/screencast.webm`](video/screencast.webm).
+
 ## Architecture
 
 ```
