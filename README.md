@@ -31,6 +31,9 @@ Launch arguments: `backend:=gazebo|sim`, `control_mode:=pid|position`,
 the GUI's "Launch RViz" button starts its own second controller, so do not use it with `bringup`). `backend:=sim` runs without physics
 (RViz only). Gazebo does not reset the object, so **restart the launch between
 attempts**.
+If the object is already at the place point when Gazebo opens, an old Gazebo
+server survived the last run and the new launch attached to its world. Check
+with `pgrep -af "gz sim"` and stop it with `pkill -f "gz sim"` before launching.
 
 ## Architecture
 
