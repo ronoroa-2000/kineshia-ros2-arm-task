@@ -16,6 +16,9 @@ What it does:
         (palm + two fingers) at the tip showing its opening. The last requested
         target is marked with an X and, if it was outside the workspace,
         the point actually used is marked with a triangle.
+      * tracking error (q_ref - q_measured, per joint) from /tracking_error,
+        published by the controller's PID tracking loop (pid_tracking.py),
+        with the RMS / peak error of the plotted window
   - Small read-outs: end-effector position and the controller status
     (/controller_status).
   - Action buttons (ROS 2 action clients of controller_node):
@@ -63,7 +66,7 @@ from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from sensor_msgs.msg import JointState
-from std_msgs.msg import String
+from std_msgs.msg import Float64MultiArray, String
 
 try:
     import pyqtgraph as pg
@@ -103,6 +106,7 @@ LAUNCH_CMD = ["ros2", "launch", "planar_arm_control",
               "controller_rviz.launch.py"]
 ANGLE_BUFFER = 1000      # samples kept per joint curve (20 s at 50 Hz)
 TRAJ_BUFFER = 3000       # end-effector points kept (60 s at 50 Hz)
+ERROR_BUFFER = 1000      # tracking-error samples kept per joint (20 s at 50 Hz)
 REDRAW_MS = 33           # plots redraw at about 30 fps
 GOAL_STATUS = {GoalStatus.STATUS_SUCCEEDED: "SUCCEEDED",
                GoalStatus.STATUS_CANCELED: "CANCELED",
@@ -117,6 +121,7 @@ class RosBridge(QtCore.QObject):
 
     joint_state = QtCore.pyqtSignal(float, list, float)  # t, angles, gripper
     end_effector = QtCore.pyqtSignal(float, float)  # x, y
+    tracking_error = QtCore.pyqtSignal(float, list)  # time (s), [e1, e2, e3]
     status = QtCore.pyqtSignal(str)                 # JSON string
     # Action signals
     servers_ready = QtCore.pyqtSignal(bool)         # both servers available
@@ -133,6 +138,8 @@ class GuiRosNode(Node):
             JointState, "/joint_states", self._on_joint_state, 10)
         self.create_subscription(
             PointStamped, "/end_effector", self._on_end_effector, 10)
+        self.create_subscription(
+            Float64MultiArray, "/tracking_error", self._on_tracking_error, 10)
         # Latched topic: we receive the last status even if we start late.
         latched = QoSProfile(
             depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -272,6 +279,11 @@ class GuiRosNode(Node):
     def _on_end_effector(self, msg):
         self._bridge.end_effector.emit(msg.point.x, msg.point.y)
 
+    def _on_tracking_error(self, msg):
+        if len(msg.data) >= len(JOINTS):
+            self._bridge.tracking_error.emit(
+                time.monotonic(), [float(v) for v in msg.data[:len(JOINTS)]])
+
     def _on_status(self, msg):
         self._bridge.status.emit(msg.data)
 
@@ -283,7 +295,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, bridge, node):
         super().__init__()
         self.setWindowTitle("Planar arm - controller GUI")
-        self.resize(1100, 860)
+        self.resize(1100, 960)
 
         self._node = node            # only request_*() are called from here
         self._servers_ready = False  # both action servers available
@@ -302,6 +314,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self._angles = [deque(maxlen=ANGLE_BUFFER) for _ in JOINTS]
         self._ee_x = deque(maxlen=TRAJ_BUFFER)
         self._ee_y = deque(maxlen=TRAJ_BUFFER)
+        self._err_t0 = None          # first tracking-error time (x origin)
+        self._err_t = deque(maxlen=ERROR_BUFFER)
+        self._err = [deque(maxlen=ERROR_BUFFER) for _ in JOINTS]
+        self._dirty_err = False
 
         self._build_ui()
         self._update_buttons()
@@ -309,6 +325,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         bridge.joint_state.connect(self._on_joint_state)
         bridge.end_effector.connect(self._on_end_effector)
+        bridge.tracking_error.connect(self._on_tracking_error)
         bridge.status.connect(self._on_status)
         bridge.servers_ready.connect(self._on_servers_ready)
         bridge.action_started.connect(self._on_action_started)
@@ -365,7 +382,24 @@ class MainWindow(QtWidgets.QMainWindow):
             self._angle_plots.append(plot)
             self._angle_curves.append(
                 plot.plot(pen=pg.mkPen(color, width=2)))
-            angle_col.addWidget(plot)
+            angle_col.addWidget(plot, 2)
+
+        # Tracking error of the three joints (reference - measured), live.
+        self._err_plot = pg.PlotWidget(title="Tracking error (ref - measured)")
+        self._err_plot.getAxis("left").enableAutoSIPrefix(False)   # keep rad
+        self._err_plot.setLabel("left", "error", units="rad")
+        self._err_plot.setLabel("bottom", "time", units="s")
+        self._err_plot.showGrid(x=True, y=True)
+        self._err_plot.addLegend(offset=(-10, 5))
+        self._err_plot.addLine(y=0, pen=pg.mkPen((150, 150, 150), width=1))
+        self._err_curves = [
+            self._err_plot.plot(pen=pg.mkPen(color, width=2), name=name)
+            for name, color in zip(JOINTS, COLORS)]
+        angle_col.addWidget(self._err_plot, 3)        # the tallest of the four
+        self._err_lbl = QtWidgets.QLabel(
+            "tracking error: no data on /tracking_error "
+            "(needs backend gazebo or ros2_control)")
+        angle_col.addWidget(self._err_lbl)
 
         self._ee_plot = pg.PlotWidget(title="End-effector trajectory")
         self._ee_plot.setLabel("left", "y", units="m")
@@ -519,6 +553,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self._gripper_latest = gripper
         self._dirty_arm = True
 
+    def _on_tracking_error(self, t, errors):
+        if self._err_t0 is None:
+            self._err_t0 = t
+        self._err_t.append(t - self._err_t0)
+        for i in range(len(JOINTS)):
+            self._err[i].append(errors[i])
+        self._dirty_err = True
+
     def _on_end_effector(self, x, y):
         self._ee_x.append(x)
         self._ee_y.append(y)
@@ -615,6 +657,20 @@ class MainWindow(QtWidgets.QMainWindow):
             t = list(self._t)
             for i in range(len(JOINTS)):
                 self._angle_curves[i].setData(t, list(self._angles[i]))
+
+        if self._dirty_err:
+            self._dirty_err = False
+            t = list(self._err_t)
+            rms, peak = [], []
+            for i in range(len(JOINTS)):
+                e = list(self._err[i])
+                self._err_curves[i].setData(t, e)
+                rms.append(math.sqrt(sum(v * v for v in e) / len(e)))
+                peak.append(max(abs(v) for v in e))
+            self._err_lbl.setText(
+                "error RMS / peak over the window (rad):  " + "   ".join(
+                    f"{j}: {r:.3f} / {m:.3f}"
+                    for j, r, m in zip(JOINTS, rms, peak)))
 
         if self._dirty_arm and self._q_latest is not None:
             self._dirty_arm = False
