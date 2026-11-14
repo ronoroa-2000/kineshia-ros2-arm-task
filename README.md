@@ -13,7 +13,7 @@ Needs ROS 2 Jazzy, Gazebo Harmonic (`ros_gz`), `numpy`, `PyQt5`, `pyqtgraph`.
 ```bash
 cd ~/kineshia_ros2_arm_task
 colcon build && source install/setup.bash
-ros2 launch planar_arm_control bringup.launch.py     # Gazebo + controller (PID) + RViz + GUI
+ros2 launch planar_arm_control bringup.launch.py     # Gazebo + controller (PID) + GUI
 ```
 
 After about 10 s, send the test scenario (or use the GUI buttons):
@@ -27,7 +27,8 @@ ros2 action send_goal /move_to_target arm_interfaces/action/MoveToTarget \
 ```
 
 Launch arguments: `backend:=gazebo|sim`, `control_mode:=pid|position`,
-`gz_gui`, `rviz`, `gui` (`true|false`). `backend:=sim` runs without physics
+`gz_gui`, `rviz`, `gui` (`true|false`; `rviz` is off by default, add `rviz:=true`;
+the GUI's "Launch RViz" button starts its own second controller, so do not use it with `bringup`). `backend:=sim` runs without physics
 (RViz only). Gazebo does not reset the object, so **restart the launch between
 attempts**.
 
