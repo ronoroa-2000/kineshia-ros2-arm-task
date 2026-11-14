@@ -15,6 +15,15 @@ Visualization Manager:
       Enabled: true
       Show Names: true
       Marker Scale: 0.5
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Scene (table, object, place zone)
+      Enabled: true
+      Topic:
+        Value: /scene_markers
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
     - Class: rviz_default_plugins/RobotModel
       Name: RobotModel
       Enabled: true

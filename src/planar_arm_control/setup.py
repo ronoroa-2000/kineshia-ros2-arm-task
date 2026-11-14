@@ -27,6 +27,7 @@ setup(
         "console_scripts": [
             "controller_node = planar_arm_control.controller_node:main",
             "gui_node = planar_arm_control.gui_node:main",
+            "scene_node = planar_arm_control.scene_node:main",
         ],
     },
 )

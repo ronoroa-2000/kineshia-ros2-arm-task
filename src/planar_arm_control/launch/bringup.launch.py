@@ -1,28 +1,46 @@
 """
-bringup.launch.py  —  STARTER STUB.
+bringup.launch.py - the whole system: controller + GUI (+ Gazebo, RViz, object).
 
-Launch the controller node and the GUI node together. Fill in the nodes once
-you have implemented them, and expose any parameters you add (publish rate,
-control mode, trajectory duration, etc.) here.
+Starts, via pick_place_demo.launch.py:
+  - Gazebo with the table and the pick object   (backend:=gazebo)
+  - robot_state_publisher, controller_node, scene_node
+  - RViz                                        (rviz:=true)
+  - the Qt telemetry GUI                        (gui:=true)
+
+Arguments (defaults in brackets):
+  backend       gazebo | sim                [gazebo]
+  control_mode  pid | position              [pid]
+  gz_gui        show the Gazebo window      [true]
+  rviz          start RViz                  [true]
+  gui           start the telemetry GUI     [true]
+
+The GUI's tracking-error plot needs real joint feedback, so it only shows
+data with backend:=gazebo. With backend:=sim /joint_states is the command
+itself (zero error by construction), and PID is switched off.
+
+Examples:
+  ros2 launch planar_arm_control bringup.launch.py
+  ros2 launch planar_arm_control bringup.launch.py control_mode:=position
+  ros2 launch planar_arm_control bringup.launch.py backend:=sim
 """
 
+import os
+
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    return LaunchDescription([
-        Node(
-            package="planar_arm_control",
-            executable="controller_node",
-            name="controller_node",
-            output="screen",
-            # parameters=[{"publish_rate_hz": 50.0, "control_mode": "position"}],
-        ),
-        Node(
-            package="planar_arm_control",
-            executable="gui_node",
-            name="gui_node",
-            output="screen",
-        ),
-    ])
+    demo = os.path.join(get_package_share_directory('planar_arm_control'),
+                        'launch', 'pick_place_demo.launch.py')
+    defaults = {'backend': 'gazebo', 'control_mode': 'pid',
+                'gz_gui': 'true', 'rviz': 'true', 'gui': 'true'}
+    args = [DeclareLaunchArgument(k, default_value=v)
+            for k, v in defaults.items()]
+    include = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(demo),
+        launch_arguments={k: LaunchConfiguration(k) for k in defaults}.items())
+    return LaunchDescription(args + [include])

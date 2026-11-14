@@ -20,7 +20,8 @@
 
   <!-- ===== Base cylinder ===== -->
   <xacro:property name="base_radius" value="0.25"/>
-  <xacro:property name="base_height" value="0.5"/>
+  <!-- Low base: the arm plane sits ~0.12 m above the table so the fingers reach objects lying on it -->
+  <xacro:property name="base_height" value="0.06"/>
   <xacro:property name="base_mass" value="5.0"/>
 
   <!-- ===== Joint limits (radians) ===== -->
