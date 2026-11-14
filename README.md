@@ -1,89 +1,133 @@
-# Kineshia Robotics — ROS 2 Manipulator Take-Home (Starter Repo)
+# 3-DoF planar arm: ROS 2 control, Gazebo pick-and-place, live telemetry GUI
 
-Welcome, and thanks for taking the time. This repo is your starting point for
-the **Robotics Software Engineer (ROS 2 & GUI Systems)** take-home task. The
-full brief (what to build, how you're evaluated, how to submit) is in the
-separate task document you were sent. This README covers setup only.
+A simulation-only ROS 2 system for a 3-DoF planar arm (links 3.0 / 2.0 / 1.5 m,
+joint limits 0–180° / ±120° / ±120°, nothing below y = 0) with a two-finger
+gripper. It picks a cylinder off a table and places it elsewhere, in Gazebo
+(real physics) and RViz, with a PyQt5/PyQtGraph operator GUI. The provided
+`planar_arm.py` is used as a black box and is **not modified**.
 
----
+## Build and run
 
-## What's in here
-
-```
-kineshia_ros2_arm_task/
-├── README.md                         <- you are here (setup only)
-└── src/
-    └── planar_arm_control/           <- an ament_python package to build on
-        ├── package.xml
-        ├── setup.py
-        ├── setup.cfg
-        ├── resource/planar_arm_control
-        ├── launch/
-        │   └── bringup.launch.py      <- STUB: launch controller + GUI
-        └── planar_arm_control/
-            ├── planar_arm.py          <- PROVIDED kinematics. DO NOT MODIFY.
-            ├── controller_node.py     <- STUB: your controller
-            └── gui_node.py            <- STUB: your PyQt5/PyQtGraph GUI
-```
-
-**`planar_arm.py` is given to you fully working** — forward kinematics,
-multiple-solution analytical inverse kinematics (with a damped-Jacobian
-fallback), joint limits, and a ground constraint. Treat it as a black-box
-library and build around it. Please don't modify it; if you think it has a
-bug, note it in your write-up instead.
-
-The three other files are **stubs** with `TODO`s describing the interface we
-suggest. You implement them.
-
----
-
-## The arm
-
-A 3-DoF planar (2D) revolute arm.
-
-| Property        | Value                                  |
-|-----------------|----------------------------------------|
-| Link lengths    | `[3.0, 2.0, 1.5]`                      |
-| Joint 1 limits  | `0°` to `180°`                         |
-| Joint 2 limits  | `-120°` to `120°`                      |
-| Joint 3 limits  | `-120°` to `120°`                      |
-| Constraint      | no part of the arm may go below `y = 0`|
-
-Quick sanity check of the provided library:
+Needs ROS 2 Jazzy, Gazebo Harmonic (`ros_gz`), `numpy`, `PyQt5`, `pyqtgraph`.
 
 ```bash
-python3 src/planar_arm_control/planar_arm_control/planar_arm.py
+cd ~/kineshia_ros2_arm_task
+colcon build && source install/setup.bash
+ros2 launch planar_arm_control bringup.launch.py     # Gazebo + controller (PID) + RViz + GUI
 ```
 
----
-
-## Environment
-
-- **ROS 2 Jazzy** (preferred) or **Humble** on **Ubuntu**.
-- Python 3, `numpy`.
-- GUI dependencies: `PyQt5` and `pyqtgraph`
-  ```bash
-  pip install PyQt5 pyqtgraph        # or: sudo apt install python3-pyqt5 python3-pyqtgraph
-  ```
-
-## Build & run
+After about 10 s, send the test scenario (or use the GUI buttons):
 
 ```bash
-# from the repo root (this is your colcon workspace root)
-colcon build
-source install/setup.bash
-
-# once you've implemented the nodes:
-ros2 launch planar_arm_control bringup.launch.py
+ros2 action send_goal /pick_and_place arm_interfaces/action/PickAndPlace \
+  "{pick: {x: 4.0, y: 2.0}, place: {x: -3.0, y: 3.0}}" --feedback
+# edge case: target outside the workspace (clipped to the boundary)
+ros2 action send_goal /move_to_target arm_interfaces/action/MoveToTarget \
+  "{target: {x: 7.0, y: 3.0}}"
 ```
 
----
+Launch arguments: `backend:=gazebo|sim`, `control_mode:=pid|position`,
+`gz_gui`, `rviz`, `gui` (`true|false`). `backend:=sim` runs without physics
+(RViz only). Gazebo does not reset the object, so **restart the launch between
+attempts**.
 
-## What to do next
+## Architecture
 
-Open the **task brief** for the full requirements, the core vs. stretch split,
-the deliverables (repo + design note + short demo recording), and the timeline.
-If anything is unclear, email **hr@kineshia.in** — reasonable questions are
-welcome and won't count against you.
+```
+ gui_node ──action──► controller_node ──► backend ──cmd_pos (bridge)──► Gazebo
+     ▲                  │      ▲  (swappable)                              │
+     │                  ▼      └───────── PidTracker ◄── /joint_states ◄───┘
+     └──── /joint_states, /tracking_error             scene_node ◄── object pose
+ RViz ◄── robot_state_publisher ◄── /joint_states
+```
 
-Good luck — we're excited to see how you architect it.
+The controller plans where the arm *should* be, Gazebo reports where it *is*,
+and the PID closes the gap.
+
+**Packages:** `arm_interfaces` (actions), `arm_description` (robot, world,
+bridge, parameters), `planar_arm_control` (controller, planning, GUI, launch),
+`arm_controllers` (empty skeleton).
+
+**`arm_interfaces`:** `MoveToTarget`, `PickAndPlace` (feedback + cancel),
+`PickOrPlace` (served as `/pick`, `/place`), `Gripper`.
+
+**`arm_description`**
+- `urdf/common_properties.xacro`: all sizes, limits, masses, Gazebo gains.
+  `planar_arm`, `end_effector`, `gazebo`, `ros2_control` xacros hold the arm,
+  gripper, Gazebo plugins and optional hardware description;
+  `robot.urdf.xacro` includes them.
+- `Gazebo/empty_world.sdf`: table, pick cylinder, green place zone.
+- `config/bridge.yaml`: Gazebo↔ROS topics. `config/controller.yaml`: every
+  controller setting incl. PID gains.
+- `rviz/display.rviz`, `launch/gazebo.launch.py`, `launch/display.launch.py`.
+
+**`planar_arm_control`, pure Python (no ROS, testable)**
+- `params.py`: all settings in one dataclass.
+- `trajectory.py`: `TrapezoidalProfile` (joint space) and `CartesianLineProfile`
+  (straight line of the gripper centre via IK), both `sample(t) → (q, qd)`.
+- `gripper_kinematics.py`: tool centre 0.35 m past link 3; library IK and own
+  heading-aware IK. `arm_model.py`: FK/IK, reach check, clipping.
+- `safety.py`: joint limits, ground, clearance. `route_planner.py`: via points
+  around the target.
+- `sequencer.py`: the step queue `approach → grip → retreat → approach →
+  release → retreat`. `pid_tracking.py`: the PID loop.
+
+**`planar_arm_control`, ROS layer**
+- `controller_node.py`: serves the five actions (`/move_to_target`,
+  `/pick_and_place`, `/gripper`, `/pick`, `/place`) and `/stop`; runs the 50 Hz loop.
+- `backends.py`: the hardware-swap point; every backend implements
+  `send(stamp, q, qd, gripper)` (`SimBackend`, `GazeboBackend`,
+  `Ros2ControlBackend`; a Dynamixel driver is one more class).
+- `scene_node.py`: RViz markers (mirrors the Gazebo object pose, or emulates a
+  grasp in `sim` mode). `gui_node.py`: the GUI.
+- Launch: `bringup` (default entry, includes `pick_place_demo`),
+  `pick_place_demo` (full wiring), `controller_rviz`, `ros2_control`.
+
+## Control loop (50 Hz)
+
+```
+q_ref, qd_ref = sequencer.step()
+q_cmd = clip(q_ref + T_ff·qd_ref + PID(q_ref − q_measured), joint limits)
+backend.send(q_cmd)   →  Gazebo
+```
+
+Each Gazebo joint has a PD servo that lags the command by about 0.4 s. The
+velocity feedforward (`pid_ff_time`, 0.3 s) cancels most of it and the PID the
+rest. It publishes `/tracking_error` and `/pid_correction`, skips correction on
+stale `/joint_states`, and clamps and clears the integral when idle.
+
+With Gazebo the controller runs on sim time (`use_sim_time`), so a slow
+simulation slows the plan instead of letting the arm fall behind it. Without
+that, at real-time factor 0.5 the arm knocked the object off the table.
+
+Measured on the test scenario (headless Gazebo), RMS tracking error:
+
+| Joint | position mode | PID mode |
+|---|---|---|
+| joint1 | 0.050 rad | 0.013 rad |
+| joint2 | 0.111 rad | 0.017 rad |
+| joint3 | 0.044 rad | 0.005 rad |
+
+In both modes the object landed within about 0.1 m of (−3, 3).
+
+## GUI threading
+
+Qt runs on the main thread, `rclpy.spin` on a second one. ROS callbacks only
+emit Qt signals; button clicks go through a thread-safe queue drained by a
+timer on the ROS thread, so all rclpy calls stay on that thread. A 33 ms timer
+redraws at about 30 fps. The GUI shows joint-angle plots, the live tracking-error
+plot with RMS/peak, the arm drawn with its gripper, the end-effector path, the
+target (and the clipped point), and Move / Pick / Place / Cancel buttons.
+
+## Notes and limitations
+
+- Base height was reduced from 0.5 to 0.06 m so the fingers reach objects on the table.
+- The grasp is open loop (no force or contact feedback); a knocked object
+  still gives `success`.
+- Only position and PID-corrected position control; no velocity or current mode.
+- With `backend:=sim` there is no measured state: PID is off and the error plot is empty.
+- `pid_ff_time` is tuned to the current Gazebo gains; retune it if they change.
+- Gazebo logs a harmless "mimic constraints not supported" error (both fingers
+  are commanded directly).
+- `arm_controllers` is an empty skeleton; there are no functional tests yet.
+- Controller maths: `docs/controller_notes.md`.
