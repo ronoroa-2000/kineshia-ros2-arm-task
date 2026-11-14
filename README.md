@@ -119,15 +119,4 @@ redraws at about 30 fps. The GUI shows joint-angle plots, the live tracking-erro
 plot with RMS/peak, the arm drawn with its gripper, the end-effector path, the
 target (and the clipped point), and Move / Pick / Place / Cancel buttons.
 
-## Notes and limitations
 
-- Base height was reduced from 0.5 to 0.06 m so the fingers reach objects on the table.
-- The grasp is open loop (no force or contact feedback); a knocked object
-  still gives `success`.
-- Only position and PID-corrected position control; no velocity or current mode.
-- With `backend:=sim` there is no measured state: PID is off and the error plot is empty.
-- `pid_ff_time` is tuned to the current Gazebo gains; retune it if they change.
-- Gazebo logs a harmless "mimic constraints not supported" error (both fingers
-  are commanded directly).
-- `arm_controllers` is an empty skeleton; there are no functional tests yet.
-- Controller maths: `docs/controller_notes.md`.
