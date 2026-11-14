@@ -1,0 +1,17 @@
+# Pick or place at one target point (x, y in metres; z is ignored).
+# Served twice by the controller: /pick closes the gripper at the target,
+# /place opens it. The arm goes behind the target, drives straight onto it,
+# operates the gripper, and backs out the same way.
+geometry_msgs/Point target
+---
+bool success
+string message
+string failed_step                # step that failed, empty on success
+geometry_msgs/Point final_position
+---
+string step                       # e.g. "pick_linear", "grip", "pick_retreat"
+uint32 step_index                 # 1-based index of the current step
+uint32 total_steps
+float64 progress                  # 0.0 .. 1.0
+geometry_msgs/Point current_position
+float64 gripper_position          # finger position, 0 = open

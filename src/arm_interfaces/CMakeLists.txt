@@ -10,6 +10,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "action/MoveToTarget.action"
   "action/PickAndPlace.action"
   "action/Gripper.action"
+  "action/PickOrPlace.action"
   DEPENDENCIES geometry_msgs action_msgs
 )
 
