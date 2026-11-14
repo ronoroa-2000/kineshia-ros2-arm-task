@@ -37,8 +37,11 @@ with `pgrep -af "gz sim"` and stop it with `pkill -f "gz sim"` before launching.
 
 ## Demo
 
-A 70 s screen recording of the test scenario (pick (4, 2), place (−3, 3)) is in
-[`video/screencast.webm`](video/screencast.webm).
+Pick (4, 2) and place (−3, 3) in Gazebo with the controller GUI. The preview
+below is a sped-down GIF; click it for the full 70 s recording
+([`video/screencast.webm`](video/screencast.webm)).
+
+[![Demo: pick and place in Gazebo with the live GUI](video/demo.gif)](video/screencast.webm)
 
 ## Architecture
 
