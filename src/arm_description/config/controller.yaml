@@ -5,7 +5,16 @@ controller_node:
     backend: sim            # or gazebo
     max_joint_velocity: 1.0
     max_joint_acceleration: 2.0
-    approach_height: 1.0
+    approach_distance: 0.5      # m, back-off behind a target along the gripper axis
+    max_tip_velocity: 0.5       # m/s, tool speed on straight lines
+    max_tip_acceleration: 1.0   # m/s^2
+    linear_step: 0.02           # m, IK sample spacing on straight lines
+    ee_center_offset: 0.35      # m, link-3 tip -> midpoint between the fingers (reaches the target)
+    ee_length: 0.55             # m, link-3 tip -> fingertips (ground check)
+    ik_mode: heading            # heading (own IK, joint 3 moves) | library (planar_arm IK)
+    avoid_target: true          # keep the arm clear of the target while approaching
+    clearance_links: 0.3        # m, links to the target
+    clearance_gripper: 0.25     # m, gripper to the target
     gripper_time: 0.5
     gripper_closed_position: 0.1
     unreachable_policy: clip

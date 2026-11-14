@@ -22,4 +22,14 @@
     <origin xyz="${L3} 0 0" rpy="0 ${ee_mount_pitch} 0"/>
   </xacro:end_effector>
 
+  <!-- Optional ros2_control description (fake or real hardware). Off by
+       default, so RViz and Gazebo launches are unchanged.
+       Use:  xacro robot.urdf.xacro ros2_control:=true hardware:=mock -->
+  <xacro:arg name="ros2_control" default="false"/>
+  <xacro:arg name="hardware" default="mock"/>
+  <xacro:if value="$(arg ros2_control)">
+    <xacro:include filename="$(find arm_description)/urdf/ros2_control.urdf.xacro"/>
+    <xacro:arm_ros2_control hardware="$(arg hardware)"/>
+  </xacro:if>
+
 </robot>

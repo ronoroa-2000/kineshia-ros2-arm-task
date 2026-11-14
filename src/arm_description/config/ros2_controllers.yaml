@@ -1,0 +1,25 @@
+# ros2_control controllers for the arm (used by launch/ros2_control.launch.py
+# in planar_arm_control). The same file works for fake and real hardware.
+controller_manager:
+  ros__parameters:
+    update_rate: 100          # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # controller_node streams joint positions here (std_msgs/Float64MultiArray)
+    arm_controller:
+      type: forward_command_controller/ForwardCommandController
+
+    gripper_controller:
+      type: forward_command_controller/ForwardCommandController
+
+arm_controller:
+  ros__parameters:
+    joints: [joint1, joint2, joint3]
+    interface_name: position
+
+gripper_controller:
+  ros__parameters:
+    joints: [ee_finger_left_joint]        # the right finger mimics the left
+    interface_name: position

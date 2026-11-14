@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!--
+  ros2_control description of the arm: one <joint> per servo, with the
+  interfaces the controllers use. Included by robot.urdf.xacro only when the
+  xacro argument  ros2_control:=true  is given.
+
+  The <plugin> line is the ONLY difference between a fake arm and a real one:
+    mock_components/GenericSystem   a fake arm: the state follows the command
+    <a Dynamixel hardware interface plugin>   real servos (port, baud rate and
+        one servo ID per joint go in <param> tags; see that plugin's README)
+  Controllers (config/ros2_controllers.yaml) and the rest of the system stay
+  exactly the same.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="ros2_control_joint" params="name lower upper">
+    <joint name="${name}">
+      <command_interface name="position">
+        <param name="min">${lower}</param>
+        <param name="max">${upper}</param>
+      </command_interface>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="arm_ros2_control" params="hardware:=mock">
+    <ros2_control name="PlanarArmSystem" type="system">
+      <hardware>
+        <xacro:if value="${hardware == 'mock'}">
+          <plugin>mock_components/GenericSystem</plugin>
+        </xacro:if>
+        <!-- real arm: put the Dynamixel plugin and its <param> tags here -->
+      </hardware>
+
+      <xacro:ros2_control_joint name="joint1" lower="${j1_lower}" upper="${j1_upper}"/>
+      <xacro:ros2_control_joint name="joint2" lower="${-j23_limit}" upper="${j23_limit}"/>
+      <xacro:ros2_control_joint name="joint3" lower="${-j23_limit}" upper="${j23_limit}"/>
+      <!-- Only the left finger is driven. The right finger is a mimic joint
+           in the URDF (it follows the left one), and ros2_control does not
+           allow command interfaces on mimic joints. -->
+      <xacro:ros2_control_joint name="ee_finger_left_joint" lower="0.0" upper="${ee_finger_travel}"/>
+    </ros2_control>
+  </xacro:macro>
+
+</robot>
