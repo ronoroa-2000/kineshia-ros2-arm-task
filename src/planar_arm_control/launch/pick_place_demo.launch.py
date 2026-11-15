@@ -22,8 +22,11 @@ import os
 import xacro
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import (DeclareLaunchArgument, EmitEvent,
+                            IncludeLaunchDescription, RegisterEventHandler)
 from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
@@ -90,5 +93,11 @@ def generate_launch_description():
         package='planar_arm_control', executable='gui_node', name='gui_node',
         output='screen', condition=IfCondition(LaunchConfiguration('gui')))
 
+    # Closing the GUI window ends the whole launch (Gazebo, controller,
+    # scene_node, RViz), so nothing is left running in the background.
+    close_all = RegisterEventHandler(OnProcessExit(
+        target_action=gui,
+        on_exit=[EmitEvent(event=Shutdown(reason='GUI closed'))]))
+
     return LaunchDescription(args + [gazebo, rsp_sim, controller, scene,
-                                     rviz, gui])
+                                     rviz, gui, close_all])

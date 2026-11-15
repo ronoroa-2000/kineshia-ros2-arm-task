@@ -628,6 +628,7 @@ class MainWindow(QtWidgets.QMainWindow):
             "action servers: ready" if ready
             else "action servers: not available")
         self._update_action_buttons()
+        self._update_buttons()
 
     def _on_action_started(self, text):
         self._action_busy = True
@@ -705,7 +706,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _update_buttons(self):
         running = self._is_running()
-        self._launch_btn.setEnabled(not running)
+        # A controller is already up (e.g. from bringup): starting another one
+        # would make two controllers fight over /joint_states and the arm.
+        external = self._servers_ready and not running
+        self._launch_btn.setEnabled(not running and not external)
+        self._launch_btn.setToolTip(
+            "A controller is already running. Start RViz with "
+            "'ros2 launch planar_arm_control bringup.launch.py rviz:=true'."
+            if external else "Start a controller and RViz")
         self._stop_btn.setEnabled(running and not self._stopping)
 
     def _start_launch(self):

@@ -1,29 +1,28 @@
 """
-bringup.launch.py - the whole system: controller + GUI (+ Gazebo, RViz, object).
+bringup.launch.py - controller + RViz + the telemetry GUI, without Gazebo.
 
 Starts, via pick_place_demo.launch.py:
-  - Gazebo with the table and the pick object   (backend:=gazebo)
   - robot_state_publisher, controller_node, scene_node
-  - RViz                                        (rviz:=true; off by default, and do NOT
-                                                 use the GUI's "Launch RViz" button
-                                                 here: it starts a second controller)
+  - RViz                                        (rviz:=true)
   - the Qt telemetry GUI                        (gui:=true)
+  - Gazebo only with backend:=gazebo            (off by default)
+
+Do NOT use the GUI's "Launch RViz" button here: RViz is already running.
 
 Arguments (defaults in brackets):
-  backend       gazebo | sim                [gazebo]
-  control_mode  pid | position              [pid]
-  gz_gui        show the Gazebo window      [true]
-  rviz          start RViz                  [false]
+  backend       gazebo | sim                [sim]
+  control_mode  pid | position              [position]
+  gz_gui        show the Gazebo window      [true]  (gazebo only)
+  rviz          start RViz                  [true]
   gui           start the telemetry GUI     [true]
 
-The GUI's tracking-error plot needs real joint feedback, so it only shows
-data with backend:=gazebo. With backend:=sim /joint_states is the command
-itself (zero error by construction), and PID is switched off.
+With backend:=sim there is no physics: /joint_states is the command itself,
+so the tracking-error plot stays empty and PID is switched off. For physics,
+the object and PID use backend:=gazebo control_mode:=pid.
 
 Examples:
   ros2 launch planar_arm_control bringup.launch.py
-  ros2 launch planar_arm_control bringup.launch.py control_mode:=position
-  ros2 launch planar_arm_control bringup.launch.py backend:=sim
+  ros2 launch planar_arm_control bringup.launch.py backend:=gazebo control_mode:=pid rviz:=false
 """
 
 import os
@@ -38,8 +37,8 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     demo = os.path.join(get_package_share_directory('planar_arm_control'),
                         'launch', 'pick_place_demo.launch.py')
-    defaults = {'backend': 'gazebo', 'control_mode': 'pid',
-                'gz_gui': 'true', 'rviz': 'false', 'gui': 'true'}
+    defaults = {'backend': 'sim', 'control_mode': 'position',
+                'gz_gui': 'true', 'rviz': 'true', 'gui': 'true'}
     args = [DeclareLaunchArgument(k, default_value=v)
             for k, v in defaults.items()]
     include = IncludeLaunchDescription(
